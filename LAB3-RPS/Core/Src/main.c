@@ -53,6 +53,11 @@ uint8_t SPITx[10];
 uint8_t STATE;
 uint8_t PLAYER;
 
+uint8_t RxBuffer[3] = {0,0,0};
+uint8_t TxBuffer[4] = {0,0,0,0};
+uint32_t PLAYER_SCORE = 0;
+uint32_t MATLAB_SCORE = 0;
+
 enum stateEnum
 {
 	IDLE,WORK,FINISH
@@ -72,6 +77,10 @@ static void MX_DMA_Init(void);
 static void MX_SPI3_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
+void UARTConfig();
+void SPITxRx_RSP();
+void UARTTxRoutine();
+void SPITxRx_Setup();
 
 /* USER CODE END PFP */
 
@@ -113,9 +122,12 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  STATE = IDLE;
+//  STATE = IDLE;
+  UARTConfig();
   SPITxRx_Setup();
 
+  TxBuffer[0] = 69;
+  TxBuffer[3] = 10;
 
   /* USER CODE END 2 */
 
@@ -126,9 +138,18 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-//		SPITxRx_WriteIO();
-//		SPITxRx_readIO();
 	  SPITxRx_RSP();
+	  UARTTxRoutine();
+//	  if(STATE == WORK)
+//	  {
+//		  if(RxBuffer[1] == 1 && PLAYER ==2) {MATLAB_SCORE +=1; STATE == IDLE;}
+//		  else if(RxBuffer[1] == 2 && PLAYER ==3) {MATLAB_SCORE +=1; STATE == IDLE;}
+//		  else if(RxBuffer[1] == 3 && PLAYER ==1) {MATLAB_SCORE +=1; STATE == IDLE;}
+//
+//		  else if(RxBuffer[1] == 2 && PLAYER ==1) {PLAYER_SCORE +=1; STATE == IDLE;}
+//		  else if(RxBuffer[1] == 3 && PLAYER ==2) {PLAYER_SCORE +=1; STATE == IDLE;}
+//		  else if(RxBuffer[1] == 1 && PLAYER ==3) {PLAYER_SCORE +=1; STATE == IDLE;}
+//	  }
 
   }
   /* USER CODE END 3 */
@@ -236,7 +257,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 57600;
+  huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -318,14 +339,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : LPUART1_RX_Pin */
-  GPIO_InitStruct.Pin = LPUART1_RX_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF12_LPUART1;
-  HAL_GPIO_Init(LPUART1_RX_GPIO_Port, &GPIO_InitStruct);
-
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -399,18 +412,42 @@ void SPITxRx_RSP()
 			STATE = WORK;
 		}
 	}
-	else if(STATE = WORK)
+	else if(STATE == WORK)
 	{
 		if(SPIRx[2] == 7)
 		{
-			STATE = IDLE;
 			PLAYER = NONE;
+			STATE = IDLE;
 		}
+	}
+}
+
+void UARTConfig()
+{
+	HAL_UART_Receive_DMA(&huart2, RxBuffer, 3);
+}
+
+void UARTTxRoutine()
+{
+	static uint64_t timestamp = 0;
+	if(HAL_GetTick() >= timestamp)
+	{
+		timestamp = HAL_GetTick() + 5;
+		/* Transmit Task */
+//		TxBuffer[1] = PLAYER_SCORE;
+//		TxBuffer[2] = MATLAB_SCORE;
+		TxBuffer[1] = 1;
+		TxBuffer[2] = 5;
+		HAL_UART_Transmit_DMA(&huart2, TxBuffer, 4);
 	}
 }
 
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, 1); //CS dnSelect
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *uart) {
+
 }
 
 /* USER CODE END 4 */
