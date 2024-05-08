@@ -52,6 +52,7 @@ uint8_t SPIRx[10];
 uint8_t SPITx[10];
 uint8_t STATE;
 uint8_t PLAYER;
+uint8_t MATLAB;
 
 uint8_t RxBuffer[3] = {0,0,0};
 uint8_t TxBuffer[4] = {0,0,0,0};
@@ -140,16 +141,21 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	  SPITxRx_RSP();
 	  UARTTxRoutine();
-//	  if(STATE == WORK)
-//	  {
-//		  if(RxBuffer[1] == 1 && PLAYER ==2) {MATLAB_SCORE +=1; STATE == IDLE;}
-//		  else if(RxBuffer[1] == 2 && PLAYER ==3) {MATLAB_SCORE +=1; STATE == IDLE;}
-//		  else if(RxBuffer[1] == 3 && PLAYER ==1) {MATLAB_SCORE +=1; STATE == IDLE;}
-//
-//		  else if(RxBuffer[1] == 2 && PLAYER ==1) {PLAYER_SCORE +=1; STATE == IDLE;}
-//		  else if(RxBuffer[1] == 3 && PLAYER ==2) {PLAYER_SCORE +=1; STATE == IDLE;}
-//		  else if(RxBuffer[1] == 1 && PLAYER ==3) {PLAYER_SCORE +=1; STATE == IDLE;}
-//	  }
+	  MATLAB = RxBuffer[1];
+	  if(STATE == WORK)
+	  {
+		  /* Matlab get score */
+		  if(MATLAB == 1 && PLAYER ==2) {MATLAB_SCORE +=1; STATE = FINISH;}
+		  else if(MATLAB == 2 && PLAYER ==3) {MATLAB_SCORE +=1; STATE = FINISH;}
+		  else if(MATLAB == 3 && PLAYER ==1) {MATLAB_SCORE +=1; STATE = FINISH;}
+
+		  /* STM get score */
+		  else if(MATLAB == 2 && PLAYER ==1) {PLAYER_SCORE +=1; STATE = FINISH;}
+		  else if(MATLAB == 3 && PLAYER ==2) {PLAYER_SCORE +=1; STATE = FINISH;}
+		  else if(MATLAB == 1 && PLAYER ==3) {PLAYER_SCORE +=1; STATE = FINISH;}
+
+
+	  }
 
   }
   /* USER CODE END 3 */
@@ -259,7 +265,7 @@ static void MX_USART2_UART_Init(void)
   huart2.Instance = USART2;
   huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.StopBits = UART_STOPBITS_2;
   huart2.Init.Parity = UART_PARITY_NONE;
   huart2.Init.Mode = UART_MODE_TX_RX;
   huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
@@ -417,8 +423,12 @@ void SPITxRx_RSP()
 		if(SPIRx[2] == 7)
 		{
 			PLAYER = NONE;
-			STATE = IDLE;
+			STATE = FINISH;
 		}
+	}
+	else if(STATE == FINISH)
+	{
+		if(SPIRx[2] == 7) STATE = IDLE;
 	}
 }
 
@@ -434,10 +444,9 @@ void UARTTxRoutine()
 	{
 		timestamp = HAL_GetTick() + 5;
 		/* Transmit Task */
-//		TxBuffer[1] = PLAYER_SCORE;
-//		TxBuffer[2] = MATLAB_SCORE;
-		TxBuffer[1] = 1;
-		TxBuffer[2] = 5;
+		TxBuffer[1] = PLAYER_SCORE;
+		TxBuffer[2] = MATLAB_SCORE;
+
 		HAL_UART_Transmit_DMA(&huart2, TxBuffer, 4);
 	}
 }
